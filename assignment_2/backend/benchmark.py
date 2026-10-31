@@ -1,6 +1,6 @@
 """Benchmark runner: every model plays the same scrambled puzzles under the same rules.
 
-    python backend/benchmark.py --puzzles 3 --scramble 4 --max-moves 5 --seed 2026
+    python backend/benchmark.py --puzzles 3 --scramble 4 --max-moves 30 --seed 2026
 
 Before any request is sent, the worst-case number of calls
 (puzzles x models x max_moves) is checked against the remaining API budget.
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--puzzles", type=int, default=3)
     ap.add_argument("--scramble", type=int, default=4)
-    ap.add_argument("--max-moves", type=int, default=5)
+    ap.add_argument("--max-moves", type=int, default=30)
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--models", nargs="*")
     ap.add_argument("--append", action="store_true",

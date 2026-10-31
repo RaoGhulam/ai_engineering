@@ -310,7 +310,7 @@ async function replay(){
 
 /* ---------- live benchmark ---------- */
 async function runLive(){
-  const total = 3, mm = 5;
+  const total = 3, mm = 30;
   const worst = total * CFG.models.length * mm;
   if (!confirm(`This sends real OpenRouter requests: worst case ${worst} calls (budget remaining ${CFG.budget.remaining}). Continue?`)) return;
   const r = await fetch('/api/run', {method:'POST', headers:{'Content-Type':'application/json'},
@@ -415,7 +415,7 @@ async function init(keepView){
   document.getElementById('replayBtn').disabled = !RESULTS;
   buildTabs(); renderDash();
   if (RESULTS && !keepView) showPuzzleFinal(RESULTS.puzzles[0].id);
-  if (!RESULTS) CFG.models.forEach(m => resetLane(m.key, CFG.solved, 5));
+  if (!RESULTS) CFG.models.forEach(m => resetLane(m.key, CFG.solved, 30));
   if (CFG.running) pollLive(0, {});
 }
 loadStudent(); init(false);

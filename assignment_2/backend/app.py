@@ -23,7 +23,7 @@ FRONTEND = config.ROOT / "frontend"
 class RunRequest(BaseModel):
     puzzles: int = 3
     scramble: int = 4
-    max_moves: int = 5
+    max_moves: int = 30
     seed: int = 2026
     models: list[str] | None = None   # default: all models
     append: bool = False              # add these models to the existing results.json

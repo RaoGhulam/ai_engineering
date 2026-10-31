@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 LEDGER = Path(__file__).resolve().parent.parent / "data" / "api_call_ledger.json"
-HARD_CAP = 67
+HARD_CAP = 1000  # was 67 for the first run; raised for the 30-move rerun
 
 _lock = threading.Lock()
 

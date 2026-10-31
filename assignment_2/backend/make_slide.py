@@ -43,11 +43,19 @@ bars = "".join(
 attempts = "".join(f"<li>{e(x)}</li>" for x in meta.get("frontier_attempts", []))
 puzzles = " · ".join(f"{p['id']}: <code>{' '.join(p['scramble'])}</code> → optimal {p['optimal_len']}" for p in R["puzzles"])
 
+best_rate = max(r["success_rate"] for r in rows)
+top = [r for r in rows if r["success_rate"] == best_rate]
+gapped = sorted((r for r in rows if r["avg_gap"] is not None), key=lambda r: r["avg_gap"])
+n_p = len(R["puzzles"])
 qa = [
     f"<b>Fastest decisions:</b> {e(fastest['name'])}, {f(fastest['avg_move_latency_s'])} s per move on average.",
-    "<b>Highest solve rate:</b> none. Every model solved 0 of 3 puzzles within the move limit.",
-    "<b>Shortest solutions:</b> no model solved a puzzle, so no optimality gap could be measured. The BFS optimum was 4 moves for each puzzle.",
-    f"<b>Did the fastest model give the best quality?</b> No. {e(fastest['name'])} was fastest but looped U, U′, U, …; speed bought no progress.",
+    (f"<b>Highest solve rate:</b> {', '.join(e(r['name']) for r in top)} ({best_rate:.1f}%)." if best_rate > 0
+     else f"<b>Highest solve rate:</b> none. Every model solved 0 of {n_p} puzzles within {meta['max_moves']} moves."),
+    (f"<b>Shortest solutions:</b> {e(gapped[0]['name'])}, average optimality gap {gapped[0]['avg_gap']:.2f} moves." if gapped
+     else "<b>Shortest solutions:</b> no model solved a puzzle, so no optimality gap could be measured."),
+    f"<b>Did the fastest model give the best quality?</b> "
+    f"{'Yes' if best_rate > 0 and fastest in top and (not gapped or gapped[0] is fastest) else 'No'}. "
+    f"{e(fastest['name'])} solved {fastest['solved']}/{fastest['trials']}.",
     f"<b>Recommendation:</b> {e(meta.get('analysis', ''))}",
 ]
 
@@ -68,7 +76,7 @@ code{{color:var(--muted);font-size:12px}} .warn{{color:var(--warn);font-size:12p
 ol li,ul li{{margin:6px 0}} .student{{position:fixed;left:0;right:0;bottom:0;background:var(--accent);color:#0b1020;font-weight:800;font-size:20px;text-align:center;padding:10px}}
 </style></head><body>
 <h1>Rubik's Cube Race: Benchmark Results</h1>
-<div class=sub>{len(R['puzzles'])} identical puzzles · {meta['scramble_len']}-move scrambles (exact distance by BFS) · move limit {meta['max_moves']} (assignment: 30; reduced for the 67-call budget) · {e(meta['metric'])} · timeout {meta['timeout_s']} s · retries {meta['retries']} · OpenRouter calls used 67/67</div>
+<div class=sub>{len(R['puzzles'])} identical puzzles · {meta['scramble_len']}-move scrambles (exact distance by BFS) · move limit {meta['max_moves']} · {e(meta['metric'])} · timeout {meta['timeout_s']} s · retries {meta['retries']} · {sum(r['total_calls'] for r in rows)} benchmark API calls</div>
 <div class=grid>
  <div class=card><h3>Per-model statistics</h3><table><tr><th>Model</th><th>Avg latency / move</th><th>Total time</th><th>Total moves</th><th>Invalid outputs</th><th>Solved</th><th>Success rate</th><th>Avg optimality gap</th></tr>{table}</table>
  <p style="color:var(--muted);font-size:12px">Puzzles: {puzzles}. Optimality gap = model moves − exact shortest moves (solved trials only).</p></div>
