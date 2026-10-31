@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rubik's Cube Race</title>
+<style>
+:root{
+  --bg:#0f1218; --panel:#171b24; --panel2:#1e2330; --line:#2a3142; --text:#e8ebf2; --muted:#8b93a7;
+  --accent:#7aa2ff; --ok:#3ecf8e; --bad:#ff6b6b; --warn:#f5b84b;
+  --cU:#f4f4f4; --cR:#d7263d; --cF:#1fa64a; --cD:#ffd23f; --cL:#ff8c1a; --cB:#2a62d6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  padding:10px 20px;background:rgba(15,18,24,.96);border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;letter-spacing:.2px}
+h1 small{color:var(--muted);font-weight:400;margin-left:8px;font-size:13px}
+.student{display:flex;gap:8px;align-items:center;background:var(--accent);color:#0b1020;border-radius:8px;padding:6px 12px;font-weight:700;font-size:15px;cursor:pointer}
+.student span.sep{opacity:.5}
+.pill{border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);font-size:12px}
+main{padding:16px 20px 60px;max-width:1600px;margin:0 auto}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+button,select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+button.primary{background:var(--accent);color:#0b1020;border-color:var(--accent);font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+.tabs{display:flex;gap:4px}
+.tabs button.on{border-color:var(--accent);color:var(--accent)}
+.puzzle-info{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+.puzzle-info b{color:var(--accent)}
+.mono{font-family:ui-monospace,Consolas,monospace}
+.lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+@media (max-width:560px){.lanes{grid-template-columns:1fr} main{padding:12px 16px}}
+.lane{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;transition:border-color .3s}
+.lane.solved{border-color:var(--ok)}
+.lane.failed{border-color:var(--bad)}
+.lane.thinking{border-color:var(--warn)}
+.lane h3{margin:0;font-size:15px}
+.lane .cat{color:var(--muted);font-size:12px}
+.status{font-size:12px;font-weight:700;border-radius:6px;padding:3px 8px;display:inline-block}
+.status.idle{background:var(--panel2);color:var(--muted)}
+.status.thinking{background:rgba(245,184,75,.15);color:var(--warn)}
+.status.solved{background:rgba(62,207,142,.15);color:var(--ok)}
+.status.failed{background:rgba(255,107,107,.15);color:var(--bad)}
+.net{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;width:100%;max-width:300px;align-self:center}
+.net div{aspect-ratio:1;border-radius:2px}
+.net .e{background:transparent}
+.curmove{display:flex;justify-content:space-between;align-items:baseline}
+.curmove .mv{font-size:30px;font-weight:800;font-family:ui-monospace,Consolas,monospace;min-width:2.5ch}
+.curmove .meta{color:var(--muted);font-size:12px;text-align:right}
+.hist{display:flex;flex-wrap:wrap;gap:4px;min-height:28px}
+.chip{font-family:ui-monospace,Consolas,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px}
+.chip.err{border-color:var(--bad);color:var(--bad)}
+.chip small{color:var(--muted);margin-left:3px}
+.result{font-size:13px;color:var(--muted)}
+section.dash{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto}
+section.dash h2{font-size:16px;margin:0 0 10px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.best{color:var(--ok);font-weight:700}
+.note{color:var(--muted);font-size:12px;margin-top:8px}
+/* slide */
+#slide{position:fixed;inset:0;z-index:50;background:#0b0e14;display:none;flex-direction:column;padding:28px 40px 70px;overflow:auto}
+#slide.on{display:flex}
+#slide h2{font-size:28px;margin:0 0 4px}
+#slide .sub{color:var(--muted);margin-bottom:18px}
+.slide-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:22px}
+@media (max-width:1000px){.slide-grid{grid-template-columns:1fr} #slide{padding:20px 16px 70px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 10px;font-size:14px;color:var(--muted);font-weight:600}
+.card{overflow-x:auto}
+.notrun{color:var(--warn);font-size:13px;margin-top:10px}
+.bars .row{display:grid;grid-template-columns:150px 1fr 70px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.bars .track{background:var(--panel2);border-radius:4px;height:14px;overflow:hidden}
+.bars .fill{height:100%;background:var(--accent);border-radius:4px}
+.qa{margin:0;padding-left:18px}
+.qa li{margin:6px 0}
+.slide-student{position:fixed;bottom:0;left:0;right:0;background:var(--accent);color:#0b1020;font-weight:800;font-size:18px;text-align:center;padding:10px;z-index:60;display:none}
+#slide.on ~ .slide-student{display:block}
+.close-slide{position:absolute;top:18px;right:24px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧊 Rubik's Cube Race <small>System-1 decision models vs. a frontier LLM · OpenRouter</small></h1>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <span class="pill" id="budgetPill">budget …</span>
+    <div class="student" id="studentBadge" title="Click to edit name / roll number">
+      <span id="stuName">Rao Ghulam Mohiuddin</span><span class="sep">|</span><span id="stuRoll">23K-0001</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <button class="primary" id="runBtn">▶ Run benchmark (live API)</button>
+    <button id="replayBtn">⟲ Replay recorded run</button>
+    <select id="speed" title="Replay speed">
+      <option value="1">1× (real latency)</option>
+      <option value="4" selected>4×</option>
+      <option value="15">15×</option>
+    </select>
+    <div class="tabs" id="puzzleTabs"></div>
+    <button id="slideBtn">📊 Benchmark slide</button>
+    <span class="pill" id="modePill">idle</span>
+  </div>
+
+  <div class="puzzle-info" id="puzzleInfo">No benchmark loaded yet.</div>
+  <div class="lanes" id="lanes"></div>
+
+  <section class="dash">
+    <h2>Statistical benchmark dashboard</h2>
+    <div id="dash">Run or load a benchmark to see results.</div>
+  </section>
+</main>
+
+<div id="slide">
+  <button class="close-slide" onclick="toggleSlide(false)">✕ Close</button>
+  <h2>Benchmark results — Rubik's Cube Race</h2>
+  <div class="sub" id="slideSub"></div>
+  <div class="slide-grid">
+    <div class="card"><h4>Per-model statistics</h4><div id="slideTable"></div></div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card bars"><h4>Avg latency per move (s) — lower is faster</h4><div id="barLat"></div></div>
+      <div class="card bars"><h4>Success rate (%)</h4><div id="barSucc"></div></div>
+      <div class="card bars"><h4>Avg optimality gap on solved puzzles (moves) — 0 is optimal</h4><div id="barGap"></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px"><h4>Answers to the experiment questions</h4><ol class="qa" id="qa"></ol></div>
+</div>
+<div class="slide-student" id="slideStudent"></div>
+
+<script>
+const COLORS = {U:'var(--cU)',R:'var(--cR)',F:'var(--cF)',D:'var(--cD)',L:'var(--cL)',B:'var(--cB)'};
+// facelet index -> (row, col) in a 9x12 net; face order URFDLB
+const FACE_ORIGIN = {U:[0,3], L:[3,0], F:[3,3], R:[3,6], B:[3,9], D:[6,3]};
+const NET_POS = {};
+'URFDLB'.split('').forEach((f, fi) => {
+  for (let i = 0; i < 9; i++) {
+    const [r0, c0] = FACE_ORIGIN[f];
+    NET_POS[`${r0 + Math.floor(i / 3)},${c0 + i % 3}`] = fi * 9 + i;
+  }
+});
+
+let CFG = null, RESULTS = null, curPuzzle = null, replayToken = 0;
+const lanes = {};
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function fmt(x, d=2){return x === null || x === undefined ? '—' : Number(x).toFixed(d)}
+function fmtTime(s){ if (s === null || s === undefined) return '—'; return s >= 90 ? `${(s/60).toFixed(2)} min` : `${s.toFixed(2)} s`; }
+
+/* ---------- student identity (always on screen) ---------- */
+function loadStudent(){
+  const q = new URLSearchParams(location.search);
+  let name = q.get('name'), roll = q.get('roll');
+  try { name = name || localStorage.getItem('stuName'); roll = roll || localStorage.getItem('stuRoll'); } catch(e){}
+  setStudent(name || 'Rao Ghulam Mohiuddin', roll || '23K-0001');
+}
+function setStudent(name, roll){
+  document.getElementById('stuName').textContent = name;
+  document.getElementById('stuRoll').textContent = roll;
+  document.getElementById('slideStudent').textContent = `${name}  ·  ${roll}`;
+  try { localStorage.setItem('stuName', name); localStorage.setItem('stuRoll', roll); } catch(e){}
+}
+document.getElementById('studentBadge').onclick = () => {
+  const n = prompt('Student name', document.getElementById('stuName').textContent); if (n === null) return;
+  const r = prompt('Roll number', document.getElementById('stuRoll').textContent); if (r === null) return;
+  setStudent(n.trim() || 'Student Name', r.trim() || 'Roll No.');
+};
+
+/* ---------- lanes ---------- */
+function netHTML(state){
+  let h = '';
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 12; c++) {
+    const idx = NET_POS[`${r},${c}`];
+    h += idx === undefined ? '<div class="e"></div>' : `<div style="background:${COLORS[state[idx]]}"></div>`;
+  }
+  return h;
+}
+function buildLanes(){
+  const box = document.getElementById('lanes'); box.innerHTML = '';
+  CFG.models.forEach(m => {
+    const el = document.createElement('div'); el.className = 'lane';
+    el.innerHTML = `<div><h3>${esc(m.name)}</h3><div class="cat">${esc(m.category)} · <span class="mono">${esc(m.id)}</span></div></div>
+      <div><span class="status idle">waiting</span></div>
+      <div class="net"></div>
+      <div class="curmove"><div><div class="cat">current move</div><div class="mv">–</div></div>
+        <div class="meta"><div class="lat">latency —</div><div class="clock">elapsed 0.00 s</div><div class="conf"></div></div></div>
+      <div><div class="cat">move history</div><div class="hist"></div></div>
+      <div class="result"></div>`;
+    box.appendChild(el);
+    lanes[m.key] = {el, q: s => el.querySelector(s)};
+  });
+}
+function resetLane(key, state, maxMoves){
+  const L = lanes[key];
+  L.el.className = 'lane';
+  L.q('.net').innerHTML = netHTML(state);
+  L.q('.mv').textContent = '–';
+  L.q('.lat').textContent = 'latency —';
+  L.q('.clock').textContent = 'elapsed 0.00 s';
+  L.q('.conf').textContent = '';
+  L.q('.hist').innerHTML = '';
+  L.q('.result').textContent = `move limit: ${maxMoves}`;
+  setStatus(key, 'idle', 'waiting');
+}
+function setStatus(key, cls, text){
+  const s = lanes[key].q('.status'); s.className = 'status ' + cls; s.textContent = text;
+  if (cls !== 'idle') lanes[key].el.className = 'lane ' + cls;
+}
+function laneMove(key, t, elapsed){
+  const L = lanes[key];
+  L.q('.net').innerHTML = netHTML(t.state_after);
+  L.q('.mv').textContent = t.move || '✗';
+  L.q('.lat').textContent = `latency ${fmt(t.latency_s, 3)} s`;
+  L.q('.clock').textContent = `elapsed ${fmt(elapsed)} s`;
+  L.q('.conf').textContent = t.confidence != null ? `confidence ${fmt(t.confidence, 2)}` : '';
+  const chip = document.createElement('span');
+  chip.className = 'chip' + (t.error ? ' err' : '');
+  chip.title = t.error ? `${t.error}` : `turn ${t.turn}`;
+  chip.innerHTML = `${esc(t.move || t.error || '?')}<small>${fmt(t.latency_s, 2)}s</small>`;
+  L.q('.hist').appendChild(chip);
+}
+function laneEnd(key, trial, maxMoves){
+  if (trial.solved) {
+    setStatus(key, 'solved', `SOLVED in ${trial.moves_applied} moves`);
+    lanes[key].q('.result').innerHTML = `✅ Solved · ${trial.moves_applied} moves (optimal ${trial.optimal_len}, gap ${trial.gap}) · ${fmtTime(trial.total_time_s)}`;
+  } else if (trial.aborted) {
+    setStatus(key, 'failed', `ABORTED (${trial.aborted})`);
+    lanes[key].q('.result').textContent = `❌ Adapter error ${trial.aborted} · ${fmtTime(trial.total_time_s)}`;
+  } else {
+    setStatus(key, 'failed', `MOVE LIMIT REACHED (${maxMoves})`);
+    lanes[key].q('.result').textContent = `❌ Not solved within ${maxMoves} moves · ${fmtTime(trial.total_time_s)}`;
+  }
+  lanes[key].q('.clock').textContent = `total ${fmtTime(trial.total_time_s)}`;
+}
+
+/* ---------- puzzle tabs / static view ---------- */
+function puzzleInfo(p, maxMoves){
+  document.getElementById('puzzleInfo').innerHTML =
+    `<div>Puzzle <b>${p.id}</b></div>
+     <div>Scramble: <span class="mono">${esc(p.scramble.join(' '))}</span></div>
+     <div>Exact shortest solution (BFS): <b>${p.optimal_len} moves</b></div>
+     <div>Move limit: <b>${maxMoves}</b></div>
+     <div>Start state: <span class="mono" style="font-size:11px">${p.state}</span></div>`;
+}
+function buildTabs(){
+  const tabs = document.getElementById('puzzleTabs'); tabs.innerHTML = '';
+  if (!RESULTS) return;
+  RESULTS.puzzles.forEach(p => {
+    const b = document.createElement('button'); b.textContent = p.id;
+    b.onclick = () => { replayToken++; showPuzzleFinal(p.id); };
+    tabs.appendChild(b);
+  });
+}
+function markTab(id){
+  [...document.querySelectorAll('#puzzleTabs button')].forEach(b => b.classList.toggle('on', b.textContent === id));
+}
+function showPuzzleFinal(pid){
+  const p = RESULTS.puzzles.find(x => x.id === pid); curPuzzle = pid; markTab(pid);
+  const mm = RESULTS.meta.max_moves; puzzleInfo(p, mm);
+  CFG.models.forEach(m => {
+    resetLane(m.key, p.state, mm);
+    const tr = RESULTS.trials.find(t => t.puzzle_id === pid && t.model_key === m.key);
+    if (!tr) { markNotRun(m.key); return; }
+    let el = 0; tr.turns.forEach(t => { el += t.latency_s; laneMove(m.key, t, el); });
+    laneEnd(m.key, tr, mm);
+  });
+  setMode('viewing results');
+}
+function setMode(t){ document.getElementById('modePill').textContent = t; }
+function markNotRun(key){
+  const why = (RESULTS && RESULTS.meta.not_run && RESULTS.meta.not_run[key]) || 'not part of this run';
+  setStatus(key, 'failed', 'NOT RUN');
+  lanes[key].q('.result').textContent = why;
+}
+
+/* ---------- replay (no API calls) ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function replay(){
+  if (!RESULTS) return;
+  const token = ++replayToken, speed = Number(document.getElementById('speed').value);
+  const mm = RESULTS.meta.max_moves;
+  for (const p of RESULTS.puzzles) {
+    if (token !== replayToken) return;
+    curPuzzle = p.id; markTab(p.id); puzzleInfo(p, mm);
+    setMode(`replaying ${p.id} at ${speed}×`);
+    CFG.models.forEach(m => resetLane(m.key, p.state, mm));
+    const trials = CFG.models.map(m => RESULTS.trials.find(t => t.puzzle_id === p.id && t.model_key === m.key)).filter(Boolean);
+    CFG.models.filter(m => !trials.some(t => t.model_key === m.key)).forEach(m => markNotRun(m.key));
+    await sleep(1200);
+    await Promise.all(trials.map(async tr => {
+      setStatus(tr.model_key, 'thinking', 'PLAYING…');
+      const t0 = performance.now(); let el = 0;
+      const tick = setInterval(() => { if (token === replayToken) lanes[tr.model_key].q('.clock').textContent = `elapsed ${fmt((performance.now()-t0)/1000*speed)} s`; }, 100);
+      for (const t of tr.turns) {
+        await sleep(Math.max(250, t.latency_s * 1000 / speed));
+        if (token !== replayToken) { clearInterval(tick); return; }
+        el += t.latency_s; laneMove(tr.model_key, t, el);
+      }
+      clearInterval(tick);
+      laneEnd(tr.model_key, tr, mm);
+    }));
+    await sleep(2500);
+  }
+  if (token === replayToken) { setMode('replay complete — all models finished'); }
+}
+
+/* ---------- live benchmark ---------- */
+async function runLive(){
+  const total = 3, mm = 5;
+  const worst = total * CFG.models.length * mm;
+  if (!confirm(`This sends real OpenRouter requests: worst case ${worst} calls (budget remaining ${CFG.budget.remaining}). Continue?`)) return;
+  const r = await fetch('/api/run', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({puzzles: total, scramble: 4, max_moves: mm, seed: 2026})});
+  if (!r.ok) { alert((await r.json()).detail); return; }
+  replayToken++; pollLive(0, {});
+}
+async function pollLive(since, st){
+  const r = await (await fetch('/api/live?since=' + since)).json();
+  for (const ev of r.events) {
+    if (ev.type === 'benchmark_start') { st.puzzles = ev.puzzles; st.mm = ev.max_moves; st.models = ev.models; }
+    if (ev.type === 'puzzle_start') {
+      const p = st.puzzles.find(x => x.id === ev.puzzle); puzzleInfo(p, st.mm);
+      setMode(`LIVE · ${ev.puzzle}`); st.t0 = {}; st.el = {};
+      CFG.models.forEach(m => resetLane(m.key, p.state, st.mm));
+      CFG.models.filter(m => !st.models.includes(m.key)).forEach(m => markNotRun(m.key));
+    }
+    if (ev.type === 'trial_start') { setStatus(ev.model, 'thinking', 'PLAYING…'); st.el[ev.model] = 0; }
+    if (ev.type === 'move') { st.el[ev.model] += ev.latency_s; laneMove(ev.model, ev, st.el[ev.model]); }
+    if (ev.type === 'trial_end') {
+      laneEnd(ev.model, {...ev, optimal_len: st.puzzles.find(x => x.id === ev.puzzle).optimal_len,
+        gap: ev.solved ? ev.moves_applied - st.puzzles.find(x => x.id === ev.puzzle).optimal_len : null}, st.mm);
+    }
+    if (ev.type === 'benchmark_end') { setMode(ev.error ? 'finished with error: ' + ev.error : 'LIVE run complete'); }
+  }
+  if (r.running || r.events.length) { setTimeout(() => pollLive(r.next, st), 500); }
+  else { await init(true); }
+}
+
+/* ---------- dashboard + slide ---------- */
+function bestIdx(rows, key, mode){
+  const vals = rows.map(r => r[key]).filter(v => v !== null && v !== undefined);
+  if (!vals.length) return null;
+  return mode === 'min' ? Math.min(...vals) : Math.max(...vals);
+}
+function statsTable(rows){
+  const bLat = bestIdx(rows, 'avg_move_latency_s', 'min'), bSucc = bestIdx(rows, 'success_rate', 'max'),
+        bGap = bestIdx(rows, 'avg_gap', 'min'), bTime = bestIdx(rows, 'total_time_s', 'min');
+  const c = (v, b, d=3) => `<td class="${v !== null && v === b ? 'best' : ''}">${fmt(v, d)}</td>`;
+  return `<table><thead><tr><th>Model</th><th>Avg latency / move (s)</th><th>Total solve time</th><th>Avg time / puzzle</th>
+    <th>Total moves</th><th>Invalid outputs</th><th>Solved</th><th>Success rate</th><th>Avg optimality gap</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td><b>${esc(r.name)}</b><br><span class="cat mono">${esc(r.id)}</span></td>
+      ${c(r.avg_move_latency_s, bLat)}
+      <td class="${r.total_time_s === bTime ? 'best' : ''}">${fmtTime(r.total_time_s)}</td>
+      <td>${fmtTime(r.avg_trial_time_s)}</td>
+      <td>${r.total_moves}</td><td>${r.invalid_outputs}</td><td>${r.solved}/${r.trials}</td>
+      <td class="${bSucc > 0 && r.success_rate === bSucc ? 'best' : ''}">${fmt(r.success_rate, 1)}%</td>
+      ${c(r.avg_gap, bGap, 2)}</tr>`).join('') + '</tbody></table>';
+}
+function bars(rows, key, unit, d){
+  const vals = rows.map(r => r[key] ?? 0), max = Math.max(...vals, 1e-9);
+  return rows.map(r => `<div class="row"><span>${esc(r.name)}</span>
+    <div class="track"><div class="fill" style="width:${r[key] == null ? 0 : Math.max(2, 100 * r[key] / max)}%"></div></div>
+    <span class="mono">${r[key] == null ? 'n/a' : fmt(r[key], d) + unit}</span></div>`).join('');
+}
+function answers(rows){
+  const by = (k, mode) => rows.filter(r => r[k] != null).sort((a, b) => mode === 'min' ? a[k] - b[k] : b[k] - a[k]);
+  const fast = by('avg_move_latency_s', 'min')[0], succ = by('success_rate', 'max'), gap = by('avg_gap', 'min');
+  const topS = succ.filter(r => r.success_rate === succ[0].success_rate);
+  const qa = [];
+  qa.push(`<b>Fastest decisions:</b> ${esc(fast.name)} at ${fmt(fast.avg_move_latency_s, 3)} s per move on average.`);
+  qa.push(succ[0].success_rate > 0
+    ? `<b>Highest solve rate:</b> ${topS.map(r => esc(r.name)).join(', ')} (${fmt(succ[0].success_rate, 1)}%).`
+    : `<b>Highest solve rate:</b> none — every model tested solved 0% of puzzles within the move limit.`);
+  qa.push(gap.length ? `<b>Shortest solutions:</b> ${esc(gap[0].name)} with an average optimality gap of ${fmt(gap[0].avg_gap, 2)} moves (${fmt(gap[0].avg_moves_when_solved, 2)} moves vs. the BFS optimum).`
+                     : `<b>Shortest solutions:</b> no model solved a puzzle, so no optimality gap could be measured.`);
+  const fastBest = succ[0].success_rate > 0 && topS.some(r => r.key === fast.key) && (!gap.length || gap[0].key === fast.key);
+  qa.push(`<b>Did the fastest model also give the best quality?</b> ${fastBest ? 'Yes' : 'No'}: ${esc(fast.name)} solved ${fast.solved}/${fast.trials} puzzles${succ[0].success_rate > 0 ? '' : ', so speed bought no solution quality'}.`);
+  qa.push(`<b>Recommendation:</b> ${RESULTS.meta.analysis ? esc(RESULTS.meta.analysis) : 'see README analysis.'}`);
+  return qa.map(x => `<li>${x}</li>`).join('');
+}
+function renderDash(){
+  if (!RESULTS || !RESULTS.summary) return;
+  const rows = RESULTS.summary, m = RESULTS.meta;
+  document.getElementById('dash').innerHTML = statsTable(rows) +
+    `<div class="note">${RESULTS.puzzles.length} puzzles × ${rows.length} models = ${RESULTS.trials.length} trials · scramble length ${m.scramble_len} (exact distance verified by BFS) ·
+     move limit ${m.max_moves} · metric ${esc(m.metric)} · timeout ${m.timeout_s}s · retries ${m.retries} ·
+     optimality gap = model moves − exact shortest moves (solved trials only) · OpenRouter calls used: ${m.budget_used_after ?? '—'} / ${CFG.budget.cap}</div>`;
+  document.getElementById('slideSub').textContent =
+    `${RESULTS.puzzles.length} identical scrambles × ${rows.length} models · ${m.scramble_len}-move scrambles · move limit ${m.max_moves} · run ${new Date(m.created).toLocaleString()}`;
+  const notRun = Object.entries(m.not_run || {}).map(([k, why]) =>
+    `<div class="notrun">⚠ ${esc(CFG.models.find(x => x.key === k)?.name || k)}: ${esc(why)}</div>`).join('');
+  document.getElementById('slideTable').innerHTML = statsTable(rows) + notRun +
+    `<div class="note">Optimal solutions (BFS): ${RESULTS.puzzles.map(p => `${p.id} ${p.optimal_len} moves`).join(' · ')}. Optimality gap applies to solved trials only.</div>`;
+  document.getElementById('barLat').innerHTML = bars(rows, 'avg_move_latency_s', ' s', 3);
+  document.getElementById('barSucc').innerHTML = bars(rows, 'success_rate', '%', 1);
+  document.getElementById('barGap').innerHTML = bars(rows, 'avg_gap', '', 2);
+  document.getElementById('qa').innerHTML = answers(rows);
+}
+function toggleSlide(on){ document.getElementById('slide').classList.toggle('on', on); }
+document.getElementById('slideBtn').onclick = () => toggleSlide(true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleSlide(false); });
+document.getElementById('replayBtn').onclick = replay;
+document.getElementById('runBtn').onclick = runLive;
+
+async function init(keepView){
+  CFG = await (await fetch('/api/config')).json();
+  document.getElementById('budgetPill').textContent = `OpenRouter calls ${CFG.budget.used}/${CFG.budget.cap}`;
+  if (!keepView) buildLanes();
+  const r = await fetch('/api/results');
+  RESULTS = r.ok ? await r.json() : null;
+  document.getElementById('replayBtn').disabled = !RESULTS;
+  buildTabs(); renderDash();
+  if (RESULTS && !keepView) showPuzzleFinal(RESULTS.puzzles[0].id);
+  if (!RESULTS) CFG.models.forEach(m => resetLane(m.key, CFG.solved, 5));
+  if (CFG.running) pollLive(0, {});
+}
+loadStudent(); init(false);
+</script>
+</body>
+</html>

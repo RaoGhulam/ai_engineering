@@ -1,0 +1,7 @@
+.env
+**/.env
+.claude/
+**/.claude/
+__pycache__/
+*.pyc
+**/data/live_events.jsonl
